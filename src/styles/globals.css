@@ -8,7 +8,8 @@
 @theme inline {
     --main-color: #0A66C2; 
     --secondary-color: #FDA4AF;
-    --accent-color: #22C55E;
+    --succes-color: #ecfccb;
+    --error-color: #fee2e2;
     --BG-color: #F3F4F6;
     --Txt-color: #111827;           
     --font-title: "Poppins", sans-serif;
