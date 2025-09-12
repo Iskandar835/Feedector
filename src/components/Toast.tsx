@@ -17,7 +17,7 @@ const VARIANT_MAP: Record<Exclude<ToastVariant, "neutral">, VariantConfig> = {
     className:
       "bg-[var(--succes-color)] border-2 border-[#d9f99d] px-4 py-3 rounded-lg w-[320px] shadow-xl",
     title: "Vos spécifications ont été enregistrées avec succès.",
-    body: "Elles s'appliqueront lors des ajouts automatiques.",
+    body: "Elles s'appliqueront dès à présent.",
   },
   error: {
     className:
