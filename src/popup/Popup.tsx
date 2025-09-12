@@ -1,6 +1,5 @@
 import Button from "@/components/Button";
 import SelectField from "@/components/SelectField";
-import TextArea from "@/components/ui/textarea";
 import Toast from "@/components/Toast";
 import { useEffect, useState } from "react";
 
@@ -29,16 +28,29 @@ export default function Popup() {
         }`}
       >
         <h1 className="text-[var(--main-color)] font-title text-center text-2xl font-bold mb-4">
-          Parametrez votre Konect !
+          Parametrez votre Feed !
         </h1>
         <p className="text-[var(--Txt-color)] font-text font-medium text-center mb-6">
-          Ces parametres seront appliques lors des demandes de connexion envoyer
-          aux personnes ayant commenter
+          Ces parametres seront appliques sur votre fil d'actualités afin
+          d'eviter de scroller inutilement !
         </p>
         <h2 className="font-bold text-xl font-title  mb-2 text-[var(--main-color)]">
           Filtres :
         </h2>
         <form action="#">
+          <div className="mb-4">
+            <p className="text-[var(--Txt-color)] font-medium mb-1">
+              Nombre minimum d'abonnées des profils
+            </p>
+            <SelectField
+              options={[
+                { value: "500/2500", label: "500 - 2500" },
+                { value: "2500/5000", label: "2500 - 5000" },
+                { value: "5000/10000", label: "5000 - 10000" },
+                { value: "+10000", label: "+ 10000" },
+              ]}
+            />
+          </div>
           <div className="mb-4">
             <p className="text-[var(--Txt-color)] font-medium mb-1">
               Photo de profil obligatoire sur les profils
@@ -52,38 +64,17 @@ export default function Popup() {
           </div>
           <div className="mb-4">
             <p className="text-[var(--Txt-color)] font-medium mb-1">
-              Nombre minimum d'abonnées du profil
+              Afficher uniquement les posts sur les dernières
             </p>
             <SelectField
               options={[
-                { value: "500/2500", label: "500 - 2500" },
-                { value: "2500/5000", label: "2500 - 5000" },
-                { value: "5000/10000", label: "5000 - 10000" },
-                { value: "+10000", label: "+ 10000" },
+                { value: "24", label: "24 heures" },
+                { value: "48", label: "48 heures" },
+                { value: "1", label: "1 semaine" },
               ]}
             />
           </div>
-          <div className="mb-4">
-            <p className="text-[var(--Txt-color)] font-medium mb-1">
-              Nombre de connexions par jour
-            </p>
-            <SelectField
-              options={[
-                { value: "10", label: "10" },
-                { value: "20", label: "20" },
-                { value: "30", label: "30" },
-                { value: "40", label: "40" },
-                { value: "50", label: "50" },
-              ]}
-            />
-          </div>
-          <div className="mb-6">
-            <p className="text-[var(--Txt-color)] font-medium mb-1">
-              Souhaitez vous ajouter un message ?
-            </p>
-            <TextArea placeholder="( Facultatif )" />
-          </div>
-          <div className="flex justify-center">
+          <div className="flex justify-center mt-10">
             <Button content="Valider" onClick={() => {}} />
           </div>
         </form>
