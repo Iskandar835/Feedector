@@ -1,4 +1,4 @@
-import Button from "@/components/Button";
+import Button from "@/components/ui/Button";
 import SelectField from "@/components/SelectField";
 
 export default function Popup() {
