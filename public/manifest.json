@@ -1,0 +1,14 @@
+{
+    "manifest_version": 3,
+    "version": "1.0.0",
+    "name": "LinkedIn extension",
+    "action": {
+        "default_popup": "index.html"
+    },
+    "permissions": [
+        "scripting"
+    ],
+    "host_permissions": [
+        "https://*.linkedin.com/*"
+    ]
+}
