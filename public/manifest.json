@@ -2,6 +2,13 @@
     "manifest_version": 3,
     "version": "1.0.0",
     "name": "LinkedIn extension",
+    "description": "Optimize your feed on linkedin with only the great posts ! Perfect for a good networking !",
+    "content_scripts": [
+        {
+            "matches": ["https://*.linkedin.com/*"],
+            "js": ["assets/content.js"]
+        }
+    ],
     "action": {
         "default_popup": "index.html"
     },
@@ -10,5 +17,10 @@
     ],
     "host_permissions": [
         "https://*.linkedin.com/*"
-    ]
+    ],
+    "icons": {
+        "16": "icon16.png",
+        "48": "icon48.png",
+        "128": "icon128.png"
+    }
 }
