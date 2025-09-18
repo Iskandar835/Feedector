@@ -36,12 +36,14 @@ export default function Popup() {
             </div>
             <div className="mb-4">
               <p className="text-[var(--Txt-color)] font-medium text-base mb-2">
-                Photo de profil obligatoire sur les profils
+                Nombre minimum de réactions sur les posts
               </p>
               <SelectField
                 options={[
-                  { value: "true", label: "Oui" },
-                  { value: "false", label: "Non" },
+                  { value: "20", label: "20" },
+                  { value: "50", label: "50" },
+                  { value: "100", label: "100" },
+                  { value: "500", label: "500" },
                 ]}
               />
             </div>
