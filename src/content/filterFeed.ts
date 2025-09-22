@@ -1,128 +1,76 @@
+// Fonction mise de coter a voir si necessaire par la suite
+// function extractNumberFromText(text: string | null | undefined ): number | null {
+//   if (!text) return null;
 
-// THE DIV WE NEED TO FILTER
-const selector =
-  'div.scaffold-finite-scroll__content[data-finite-scroll-hotkey-context="FEED"]';
+//   // Cherche uniquement les chiffres dans la chaîne
+//   const match = text.match(/\d+/g); // va retourner ["478"] pour "478 abonnés"
+//   if (!match) return null;
 
+//   // Concatène tous les nombres trouvés (utile si tu as des milliers "1 234")
+//   const numberStr = match.join("");
+//   const number = Number(numberStr);
 
-function waitForFeed(selector: string) {
-  const applyStyle = (el: HTMLElement) => {
-    el.style.backgroundColor = "red";
-  };
+//   return isNaN(number) ? null : number;
+// }
 
-  const found = document.querySelector<HTMLElement>(selector);
-  if (found) {
-    applyStyle(found);
+// Esayyer d'optimiser de façon a recuperer chaque post et voir les data dessus avec nos fonctions
+
+function waitForFeed() {
+  const divFeed = document.querySelector<HTMLElement>(
+    'div.scaffold-finite-scroll__content[data-finite-scroll-hotkey-context="FEED"]'
+  );
+
+  if (divFeed) {
+    divFeed.style.backgroundColor = "red";
+
     return;
   }
-
-  const observer = new MutationObserver((_, obs) => {
-    const target = document.querySelector<HTMLElement>(selector);
-    if (target) {
-      applyStyle(target);
-      obs.disconnect();
-    }
-  });
-
-  observer.observe(document.body, { childList: true, subtree: true });
-
-  const colorReacts = document.querySelectorAll<HTMLSpanElement>("span[data-test-id='social-actions__reaction-count']");
-  colorReacts.forEach((el) => {
-    el.style.color = "red";
-  });
 }
 
-// *** SPAN AVEC LE NOM + LE NOMBRE DE PERSONNE QUI REAGIS ****
-// <span class="social-details-social-counts__social-proof-container">
-//                       <span aria-hidden="true" data-social-proof-fallback="" class="social-details-social-counts__social-proof-fallback-number">8</span>
-//                       <span class="social-details-social-counts__social-proof-text">
-//                             Anthony Carreta et 7&nbsp;autres personnes
-//                       </span>
-//                     </span>
+// Voir car a certain endroit nombre d'abonnées present et d'autre non
+async function getFollowerCount(vanityName: string) {
+  const url = `https://www.linkedin.com/voyager/api/graphql?includeWebMetadata=true&variables=(vanityName:${vanityName})&queryId=voyagerIdentityDashProfiles.a1a483e719b20537a256b6853cdca711`;
 
-//*** SPAN AVEC UNIQUEMENT LE NOMBRE DE PERSONNE QUI REAGIS ****
-// <span aria-hidden="true" class="social-details-social-counts__reactions-count">22</span>
-
-function highlightReactions() {
-   // Span avec uniquement le nombre
-   const elOnlyNumber = document.querySelectorAll<HTMLSpanElement>(
-    "span.social-details-social-counts__reactions-count"
-  );
-
-  elOnlyNumber.forEach((el) => {
-    if (!el.dataset.konecterMarked) {
-      console.log(`Voici le nombre de réaction ${el.textContent}`);
-      el.dataset.konecterMarked = "true"; // ✅ Marque comme traité
-    }
+  const response = await fetch(url, {
+    method: "GET",
+    credentials: "include",
+    headers: {
+      accept: "application/vnd.linkedin.normalized+json+2.1",
+      "csrf-token": "ajax:0907696543489087217",
+    },
   });
 
-  // Span avec nom + nombre
-  const elNumberAndNames = document.querySelectorAll<HTMLSpanElement>(
-    "span.social-details-social-counts__social-proof-fallback-number"
-  );
-
-  elNumberAndNames.forEach((el) => {
-    if (!el.dataset.konecterMarked) {
-      console.log(`Voici le nombre de reaction post avec nom ${el.textContent}`);
-      el.dataset.konecterMarked = "true"; // ✅ Marque comme traité
-    }
-  });
-}
-
-function extractNumberFromText(text: string | null | undefined ): number | null {
-  if (!text) return null;
-
-  // Cherche uniquement les chiffres dans la chaîne
-  const match = text.match(/\d+/g); // va retourner ["478"] pour "478 abonnés"
-  if (!match) return null;
-
-  // Concatène tous les nombres trouvés (utile si tu as des milliers "1 234")
-  const numberStr = match.join("");
-  const number = Number(numberStr);
-
-  return isNaN(number) ? null : number;
-}
-
-
-async function getFollowers(profileUrl: string): Promise<void | number | null> {
-  try {
-    // Récupère le HTML du profil avec les cookies de session LinkedIn
-    const response = await fetch(profileUrl, { credentials: "include" });
-    const html = await response.text();
-
-    // Transforme le HTML en DOM exploitable
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(html, "text/html");
-
-    // Cherche le premier <span> du UL des abonnés
-    const span = doc.querySelector<HTMLSpanElement>("span.pvs-entity__caption-wrapper");
-    if (!span) return console.log("span non trouvé");
-    // Le span ne se trouve pas, verifier la reponse 'html' et voir comment on peut faire 
-
-    // Récupère le texte et transforme "2 265" -> 2265
-    const followers = extractNumberFromText(span.textContent);
-    return followers;
-
-  } catch (err) {
-    return console.log("Erreur récupération followers :", err);
+  if (!response.ok) {
+    console.error("❌ Erreur HTTP la voici :", response.status);
+    return null;
   }
+
+  const data = await response.json();
+  return data?.included?.[0]?.followerCount ?? null;
 }
 
 function findProfilSubs() {
-  const linkTag = document.querySelectorAll<HTMLAnchorElement>("a.update-components-actor__meta-link");
-  
-  linkTag.forEach((el) => {
-    if (!el.dataset.konecterMarked) {
-      el.dataset.konecterMarked = "true";;
-      getFollowers(el.href).then((followers) => console.log(`Nombre d'abonnés : ${followers}`));
+  const profilLinkEl = document.querySelectorAll<HTMLAnchorElement>(
+    "a.update-components-actor__meta-link"
+  );
+
+  profilLinkEl.forEach((profilLink) => {
+    if (!profilLink.dataset.konecterMarked) {
+      // c'est le pathname qui est envoyer dans l'api c'est le meme
+      const payload = profilLink.pathname.replace("/in/", "").replace("/", "");
+      getFollowerCount(payload).then((followers) =>
+        console.log(`Nombre d'abonnés : ${followers}`)
+      );
+      profilLink.dataset.konecterMarked = "true";
     }
   });
 }
 
-
 function spotPostDate() {
-  // fonction qui marche mais reste a optimiser le tout avec une bonne gestion des BedDoubleIcon, posts, avec MutationObserver
-  // cette classe est aussi utilisé pour les Post sponsorisé 
-  const dateSpans = document.querySelectorAll<HTMLSpanElement>("span.update-components-actor__sub-description"); 
+  // cette classe est aussi utilisé pour les Post sponsorisé
+  const dateSpans = document.querySelectorAll<HTMLSpanElement>(
+    "span.update-components-actor__sub-description"
+  );
   dateSpans.forEach((span) => {
     const aria = span.querySelector("span[aria-hidden='true']");
     if (aria) {
@@ -138,17 +86,43 @@ function spotPostDate() {
   });
 }
 
+function highlightReactions() {
+  const elOnlyNumber = document.querySelectorAll<HTMLSpanElement>(
+    "span.social-details-social-counts__reactions-count"
+  );
+  elOnlyNumber.forEach((el) => {
+    if (!el.dataset.konecterMarked) {
+      console.log(`Voici le nombre de réaction : ${el.textContent}`);
+      el.dataset.konecterMarked = "true";
+    }
+  });
 
-const observer = new MutationObserver(() => {
-  findProfilSubs();
-  spotPostDate();
-  highlightReactions();
-});
+  const elNumberAndNames = document.querySelectorAll<HTMLSpanElement>(
+    "span.social-details-social-counts__social-proof-fallback-number"
+  );
+  elNumberAndNames.forEach((el) => {
+    if (!el.dataset.konecterMarked) {
+      console.log(
+        `Voici le nombre de reaction post avec nom : ${el.textContent}`
+      );
+      el.dataset.konecterMarked = "true";
+    }
+  });
+}
 
-observer.observe(document.body, {
-  childList: true,
-  subtree: true,
-});
+function allDataWeNeed() {
+  const observer = new MutationObserver(() => {
+    waitForFeed();
+    findProfilSubs();
+    spotPostDate();
+    highlightReactions();
+  });
+
+  observer.observe(document.body, {
+    childList: true,
+    subtree: true,
+  });
+}
 
 function onlyWorkOnFeedPage() {
   const url = window.location.href;
@@ -158,7 +132,7 @@ function onlyWorkOnFeedPage() {
     return;
   }
   if (url === targetUrl) {
-    waitForFeed(selector);
+    allDataWeNeed();
   }
 }
 
