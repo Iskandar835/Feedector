@@ -13,21 +13,21 @@
 //   return isNaN(number) ? null : number;
 // }
 
-// Esayyer d'optimiser de façon a recuperer chaque post et voir les data dessus avec nos fonctions
+// **** function qui recupere le feed ****
+// function waitForFeed() {
+//   const divFeed = document.querySelector<HTMLElement>(
+//     'div.scaffold-finite-scroll__content[data-finite-scroll-hotkey-context="FEED"]'
+//   );
 
-function waitForFeed() {
-  const divFeed = document.querySelector<HTMLElement>(
-    'div.scaffold-finite-scroll__content[data-finite-scroll-hotkey-context="FEED"]'
-  );
+//   if (divFeed) {
+//     divFeed.style.backgroundColor = "red";
 
-  if (divFeed) {
-    divFeed.style.backgroundColor = "red";
+//     return;
+//   }
+// }
 
-    return;
-  }
-}
+// Porchaine etape reussir a recuper le tokenId de session et ne pas le mettre en dure
 
-// Voir car a certain endroit nombre d'abonnées present et d'autre non
 async function getFollowerCount(vanityName: string) {
   const url = `https://www.linkedin.com/voyager/api/graphql?includeWebMetadata=true&variables=(vanityName:${vanityName})&queryId=voyagerIdentityDashProfiles.a1a483e719b20537a256b6853cdca711`;
 
@@ -46,82 +46,79 @@ async function getFollowerCount(vanityName: string) {
   }
 
   const data = await response.json();
+
+  if (data?.included?.[0]?.followerCount === null) {
+    return data?.included?.[5]?.followerCount ?? null;
+  }
+
   return data?.included?.[0]?.followerCount ?? null;
 }
 
-function findProfilSubs() {
-  const profilLinkEl = document.querySelectorAll<HTMLAnchorElement>(
+function processPostData(post: HTMLElement) {
+  // --- Get the profil ---
+  const profilLink = post.querySelector<HTMLAnchorElement>(
     "a.update-components-actor__meta-link"
   );
+  const vanityName = profilLink
+    ? profilLink.pathname.replace("/in/", "").replace("/", "")
+    : null;
 
-  profilLinkEl.forEach((profilLink) => {
-    if (!profilLink.dataset.konecterMarked) {
-      // c'est le pathname qui est envoyer dans l'api c'est le meme
-      const payload = profilLink.pathname.replace("/in/", "").replace("/", "");
-      getFollowerCount(payload).then((followers) =>
-        console.log(`Nombre d'abonnés : ${followers}`)
-      );
-      profilLink.dataset.konecterMarked = "true";
-    }
-  });
+  // --- Get the date *its the same element for sposored post ---
+  const dateSpan = post.querySelector<HTMLSpanElement>(
+    "span.update-components-actor__sub-description span[aria-hidden='true']"
+  );
+  const dateText = dateSpan
+    ? dateSpan.textContent?.replace("•", "").trim()
+    : null;
+
+  // --- Get the reactions ---
+  const reactionsCount = Number(
+    post.querySelector<HTMLSpanElement>(
+      "span.social-details-social-counts__reactions-count"
+    )?.textContent
+  );
+
+  // --- Get the reactions (with name) ---
+  const reactionsWithNames = Number(
+    post.querySelector<HTMLSpanElement>(
+      "span.social-details-social-counts__social-proof-fallback-number"
+    )?.textContent
+  );
+
+  // --- Fetch followers ---
+  if (vanityName && !post.dataset.konecterMarked) {
+    getFollowerCount(vanityName).then((followers) => {
+      console.log("===========");
+      console.log(`👤 Autor : ${vanityName}`);
+      console.log(`👥 Followers : ${followers}`);
+      console.log(`📅 Date : ${dateText}`);
+      console.log(`👍 Reactions : ${reactionsCount}`);
+      console.log(`👍 Reactions with name : ${reactionsWithNames}`);
+      console.log("===========");
+    });
+    post.dataset.konecterMarked = "true";
+  }
 }
 
-function spotPostDate() {
-  // cette classe est aussi utilisé pour les Post sponsorisé
-  const dateSpans = document.querySelectorAll<HTMLSpanElement>(
-    "span.update-components-actor__sub-description"
+function scanAllPost() {
+  const posts = document.querySelectorAll<HTMLDivElement>(
+    "div[data-view-name='feed-full-update']"
   );
-  dateSpans.forEach((span) => {
-    const aria = span.querySelector("span[aria-hidden='true']");
-    if (aria) {
-      const textNode = Array.from(aria.childNodes).find(
-        (node) => node.nodeType === Node.TEXT_NODE && node.textContent?.trim()
-      );
-      if (textNode && !span.dataset.konecterMarked) {
-        const dateText = textNode.textContent?.trim();
-        console.log("📅 Date trouvée :", dateText);
-        span.dataset.konecterMarked = "true";
-      }
-    }
-  });
+  posts.forEach(processPostData);
 }
 
-function highlightReactions() {
-  const elOnlyNumber = document.querySelectorAll<HTMLSpanElement>(
-    "span.social-details-social-counts__reactions-count"
-  );
-  elOnlyNumber.forEach((el) => {
-    if (!el.dataset.konecterMarked) {
-      console.log(`Voici le nombre de réaction : ${el.textContent}`);
-      el.dataset.konecterMarked = "true";
-    }
-  });
-
-  const elNumberAndNames = document.querySelectorAll<HTMLSpanElement>(
-    "span.social-details-social-counts__social-proof-fallback-number"
-  );
-  elNumberAndNames.forEach((el) => {
-    if (!el.dataset.konecterMarked) {
-      console.log(
-        `Voici le nombre de reaction post avec nom : ${el.textContent}`
-      );
-      el.dataset.konecterMarked = "true";
-    }
-  });
-}
-
-function allDataWeNeed() {
+function initObserver() {
   const observer = new MutationObserver(() => {
-    waitForFeed();
-    findProfilSubs();
-    spotPostDate();
-    highlightReactions();
+    // waitForFeed();
+    scanAllPost();
   });
 
   observer.observe(document.body, {
     childList: true,
     subtree: true,
   });
+
+  scanAllPost();
 }
 
 function onlyWorkOnFeedPage() {
@@ -132,7 +129,7 @@ function onlyWorkOnFeedPage() {
     return;
   }
   if (url === targetUrl) {
-    allDataWeNeed();
+    initObserver();
   }
 }
 
