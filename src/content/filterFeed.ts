@@ -26,9 +26,18 @@
 //   }
 // }
 
-// Porchaine etape reussir a recuper le tokenId de session et ne pas le mettre en dure
+function getSessionToken() {
+  const token = document.cookie
+    .split("; ")
+    .find((c) => c.startsWith("JSESSIONID"))
+    ?.split("=")[1]
+    ?.replace(/^"|"$/g, "");
+
+  return token;
+}
 
 async function getFollowerCount(vanityName: string) {
+  const token = getSessionToken();
   const url = `https://www.linkedin.com/voyager/api/graphql?includeWebMetadata=true&variables=(vanityName:${vanityName})&queryId=voyagerIdentityDashProfiles.a1a483e719b20537a256b6853cdca711`;
 
   const response = await fetch(url, {
@@ -36,7 +45,7 @@ async function getFollowerCount(vanityName: string) {
     credentials: "include",
     headers: {
       accept: "application/vnd.linkedin.normalized+json+2.1",
-      "csrf-token": "ajax:0907696543489087217",
+      "csrf-token": `${token}`,
     },
   });
 
