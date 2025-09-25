@@ -1,7 +1,53 @@
+import { useState } from "react";
 import Button from "@/components/ui/Button";
 import SelectField from "@/components/SelectField";
 
 export default function Popup() {
+  const [filters, setFilters] = useState({
+    minFollowers: "0",
+    timeRange: "0",
+    minReactions: "0",
+  });
+
+  const handleValueChange = (name: string) => (value: string) => {
+    setFilters((prev) => ({
+      ...prev,
+      [name]: Number(value),
+    }));
+  };
+
+  function sendMessageToContent<T = any>(
+    action: string,
+    payload: any
+  ): Promise<T> {
+    return new Promise((resolve) => {
+      chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        if (tabs[0].id) {
+          chrome.tabs.sendMessage(
+            tabs[0].id,
+            { action, payload },
+            (response) => {
+              resolve(response as T);
+            }
+          );
+        }
+      });
+    });
+  }
+
+  async function handleApplyFilters() {
+    const allValid = Object.values(filters).every((value) => value !== "0");
+    if (!allValid) {
+      return;
+    }
+    try {
+      const response = await sendMessageToContent("APPLY_FILTERS", filters);
+      console.log(`Voici la reponse de handleApplyFilters : ${response}`);
+    } catch (error) {
+      console.error("Erreur lors de l'envoi des filtres :", error);
+    }
+  }
+
   return (
     <>
       <div
@@ -20,17 +66,21 @@ export default function Popup() {
           <h2 className="font-bold text-xl font-title  mb-3 text-[var(--main-color)]">
             Filtres :
           </h2>
-          <form action="#">
+          <form>
             <div className="mb-4">
               <p className="text-[var(--Txt-color)] font-medium text-base mb-2">
                 Nombre minimum d'abonnées des profils
               </p>
               <SelectField
+                selectName="minFollowers"
+                required={true}
+                onValueChange={handleValueChange("minFollowers")}
                 options={[
-                  { value: "500/2500", label: "500 - 2500" },
-                  { value: "2500/5000", label: "2500 - 5000" },
-                  { value: "5000/10000", label: "5000 - 10000" },
-                  { value: "+10000", label: "+ 10000" },
+                  { value: "500", label: "jusqu'à 500" },
+                  { value: "2500", label: "jusqu'à 2500" },
+                  { value: "5000", label: "jusqu'à 5000" },
+                  { value: "10000", label: "jusqu'à 10000" },
+                  { value: "10001", label: "à partir de 10000 et plus" },
                 ]}
               />
             </div>
@@ -39,6 +89,9 @@ export default function Popup() {
                 Nombre minimum de réactions sur les posts
               </p>
               <SelectField
+                selectName="minReactions"
+                required={true}
+                onValueChange={handleValueChange("minReactions")}
                 options={[
                   { value: "20", label: "20" },
                   { value: "50", label: "50" },
@@ -52,6 +105,9 @@ export default function Popup() {
                 Afficher uniquement les posts sur les dernières
               </p>
               <SelectField
+                selectName="timeRange"
+                required={true}
+                onValueChange={handleValueChange("timeRange")}
                 options={[
                   { value: "24", label: "24 heures" },
                   { value: "48", label: "48 heures" },
@@ -60,7 +116,7 @@ export default function Popup() {
               />
             </div>
             <div className="flex justify-center mt-12">
-              <Button content="Valider" onClick={() => {}} />
+              <Button content="Valider" onClick={handleApplyFilters} />
             </div>
           </form>
         </div>
