@@ -1,18 +1,3 @@
-// Fonction mise de coter a voir si necessaire par la suite
-// function extractNumberFromText(text: string | null | undefined ): number | null {
-//   if (!text) return null;
-
-//   // Cherche uniquement les chiffres dans la chaîne
-//   const match = text.match(/\d+/g); // va retourner ["478"] pour "478 abonnés"
-//   if (!match) return null;
-
-//   // Concatène tous les nombres trouvés (utile si tu as des milliers "1 234")
-//   const numberStr = match.join("");
-//   const number = Number(numberStr);
-
-//   return isNaN(number) ? null : number;
-// }
-
 // **** function qui recupere le feed ****
 // function waitForFeed() {
 //   const divFeed = document.querySelector<HTMLElement>(
@@ -25,6 +10,20 @@
 //     return;
 //   }
 // }
+
+function dataFromFilters() {
+  chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+    if (msg.action === "APPLY_FILTERS" && sendResponse) {
+      const filtersData = msg.payload;
+      console.log("recu dans content scrip", filtersData);
+      sendResponse({ status: "ok" });
+
+      return filtersData;
+    }
+  });
+}
+
+dataFromFilters();
 
 function getSessionToken() {
   const token = document.cookie
@@ -118,7 +117,6 @@ function scanAllPost() {
 
 function initObserver() {
   const observer = new MutationObserver(() => {
-    // waitForFeed();
     scanAllPost();
   });
 
