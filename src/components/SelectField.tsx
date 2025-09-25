@@ -12,12 +12,20 @@ type Option = {
 };
 
 type SelectFieldProps = {
+  selectName: string;
+  onValueChange: (value: string) => void;
+  required: boolean;
   options: Option[];
 };
 
-export default function SelectField({ options }: SelectFieldProps) {
+export default function SelectField({
+  selectName,
+  onValueChange,
+  required,
+  options,
+}: SelectFieldProps) {
   return (
-    <Select>
+    <Select name={selectName} onValueChange={onValueChange} required={required}>
       <SelectTrigger className="w-[180px]">
         <SelectValue placeholder="Sélectionner..." />
       </SelectTrigger>
