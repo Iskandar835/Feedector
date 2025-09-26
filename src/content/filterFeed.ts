@@ -11,20 +11,6 @@
 //   }
 // }
 
-function dataFromFilters() {
-  chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
-    if (msg.action === "APPLY_FILTERS" && sendResponse) {
-      const filtersData = msg.payload;
-      console.log("recu dans content scrip", filtersData);
-      sendResponse({ status: "ok" });
-
-      return filtersData;
-    }
-  });
-}
-
-dataFromFilters();
-
 function getSessionToken() {
   const token = document.cookie
     .split("; ")
@@ -34,6 +20,26 @@ function getSessionToken() {
 
   return token;
 }
+
+let filterDataStore: any = {};
+
+function dataFromFilters() {
+  chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+    if (msg.action === "APPLY_FILTERS" && sendResponse) {
+      const filtersData = msg.payload;
+      filterDataStore = filtersData;
+
+      console.log(
+        "voici le tableau depuis la reponse de dataFromFilter",
+        filterDataStore
+      );
+      sendResponse({ status: "ok" });
+      // voir comment recuprer les données reçus et les comparer avec les donnees du feed
+    }
+  });
+}
+
+dataFromFilters();
 
 async function getFollowerCount(vanityName: string) {
   const token = getSessionToken();
@@ -62,7 +68,21 @@ async function getFollowerCount(vanityName: string) {
   return data?.included?.[0]?.followerCount ?? null;
 }
 
-function processPostData(post: HTMLElement) {
+function parsePostDate(dateSpan: HTMLSpanElement | null) {
+  if (!dateSpan) return null;
+
+  const rawText = dateSpan.textContent ?? "";
+  const match = rawText.match(/(\d+)\s*(sem|j|h|min)/i);
+
+  if (!match) return null;
+
+  const value = Number(match[1]);
+  const unit = match[2].toLowerCase();
+
+  return { value, unit };
+}
+
+async function processPostData(post: HTMLElement) {
   // --- Get the profil ---
   const profilLink = post.querySelector<HTMLAnchorElement>(
     "a.update-components-actor__meta-link"
@@ -73,11 +93,9 @@ function processPostData(post: HTMLElement) {
 
   // --- Get the date *its the same element for sposored post ---
   const dateSpan = post.querySelector<HTMLSpanElement>(
-    "span.update-components-actor__sub-description span[aria-hidden='true']"
+    "span.update-components-actor__sub-description"
   );
-  const dateText = dateSpan
-    ? dateSpan.textContent?.replace("•", "").trim()
-    : null;
+  const dateValue = parsePostDate(dateSpan);
 
   // --- Get the reactions ---
   const reactionsCount = Number(
@@ -95,29 +113,46 @@ function processPostData(post: HTMLElement) {
 
   // --- Fetch followers ---
   if (vanityName && !post.dataset.konecterMarked) {
-    getFollowerCount(vanityName).then((followers) => {
-      console.log("===========");
-      console.log(`👤 Autor : ${vanityName}`);
-      console.log(`👥 Followers : ${followers}`);
-      console.log(`📅 Date : ${dateText}`);
-      console.log(`👍 Reactions : ${reactionsCount}`);
-      console.log(`👍 Reactions with name : ${reactionsWithNames}`);
-      console.log("===========");
-    });
+    const followers = await getFollowerCount(vanityName);
+
     post.dataset.konecterMarked = "true";
+
+    return {
+      vanityName,
+      followers,
+      dateValue,
+      reactionsCount,
+      reactionsWithNames,
+    };
   }
+
+  return null;
 }
 
-function scanAllPost() {
+async function scanAllPost() {
   const posts = document.querySelectorAll<HTMLDivElement>(
     "div[data-view-name='feed-full-update']"
   );
-  posts.forEach(processPostData);
+
+  const unprocessedPosts = Array.from(posts).filter(
+    (post) => !post.dataset.konecterMarked
+  );
+
+  if (unprocessedPosts.length === 0) return;
+
+  const results = await Promise.all(unprocessedPosts.map(processPostData));
+
+  results.forEach((result) => {
+    if (result) {
+      // entrer logique des filtres surement ici
+    }
+  });
 }
 
 function initObserver() {
   const observer = new MutationObserver(() => {
-    scanAllPost();
+    clearTimeout((window as any)._scanTimeout);
+    (window as any)._scanTimeout = setTimeout(scanAllPost, 100);
   });
 
   observer.observe(document.body, {
