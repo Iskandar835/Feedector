@@ -42,7 +42,7 @@ export default function Popup() {
     }
     try {
       const response = await sendMessageToContent("APPLY_FILTERS", filters);
-      console.log(`Voici la reponse de handleApplyFilters : ${response}`);
+      return response;
     } catch (error) {
       console.error("Erreur lors de l'envoi des filtres :", error);
     }
