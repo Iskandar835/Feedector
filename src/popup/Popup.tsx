@@ -76,11 +76,10 @@ export default function Popup() {
                 required={true}
                 onValueChange={handleValueChange("minFollowers")}
                 options={[
-                  { value: "500", label: "jusqu'à 500" },
-                  { value: "2500", label: "jusqu'à 2500" },
-                  { value: "5000", label: "jusqu'à 5000" },
-                  { value: "10000", label: "jusqu'à 10000" },
-                  { value: "10001", label: "à partir de 10000 et plus" },
+                  { value: "500", label: "500 abonnés" },
+                  { value: "2500", label: "2500 abonnés" },
+                  { value: "5000", label: "5000 abonnés" },
+                  { value: "10000", label: "10000 abonnés" },
                 ]}
               />
             </div>
