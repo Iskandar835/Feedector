@@ -143,12 +143,9 @@ async function scanAllPost() {
         post.style.display = "none";
       }
 
-      // if (
-      //   postData.followers !== null &&
-      //   postData.followers < filterDataStore.minFollowers
-      // ) {
-      //   postContainer.classList.add('konecter-filtered');
-      // }
+      if (postData.followers < filterDataStore.minFollowers) {
+        post.style.display = "none";
+      }
     } catch (err) {
       console.error("Error processing a post :", err);
     }
