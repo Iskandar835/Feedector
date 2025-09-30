@@ -1,16 +1,3 @@
-// **** function qui recupere le feed ****
-// function waitForFeed() {
-//   const divFeed = document.querySelector<HTMLElement>(
-//     'div.scaffold-finite-scroll__content[data-finite-scroll-hotkey-context="FEED"]'
-//   );
-
-//   if (divFeed) {
-//     divFeed.style.backgroundColor = "red";
-
-//     return;
-//   }
-// }
-
 function getSessionToken() {
   const token = document.cookie
     .split("; ")
@@ -29,12 +16,7 @@ function dataFromFilters() {
       const filtersData = msg.payload;
       filterDataStore = filtersData;
 
-      console.log(
-        "voici le tableau depuis la reponse de dataFromFilter",
-        filterDataStore
-      );
       sendResponse({ status: "ok" });
-      // voir comment recuprer les données reçus et les comparer avec les donnees du feed
     }
   });
 }
@@ -98,18 +80,20 @@ async function processPostData(post: HTMLElement) {
   const dateValue = parsePostDate(dateSpan);
 
   // --- Get the reactions ---
-  const reactionsCount = Number(
-    post.querySelector<HTMLSpanElement>(
-      "span.social-details-social-counts__reactions-count"
-    )?.textContent
+  const reactionsCountElement = post.querySelector<HTMLSpanElement>(
+    "span.social-details-social-counts__reactions-count"
   );
+  const reactionsCount = reactionsCountElement?.textContent
+    ? Number(reactionsCountElement.textContent)
+    : 0;
 
   // --- Get the reactions (with name) ---
-  const reactionsWithNames = Number(
-    post.querySelector<HTMLSpanElement>(
-      "span.social-details-social-counts__social-proof-fallback-number"
-    )?.textContent
+  const reactionsWithNamesElement = post.querySelector<HTMLSpanElement>(
+    "span.social-details-social-counts__social-proof-fallback-number"
   );
+  const reactionsWithNames = reactionsWithNamesElement?.textContent
+    ? Number(reactionsWithNamesElement.textContent)
+    : 0;
 
   // --- Fetch followers ---
   if (vanityName && !post.dataset.konecterMarked) {
@@ -131,7 +115,7 @@ async function processPostData(post: HTMLElement) {
 
 async function scanAllPost() {
   const posts = document.querySelectorAll<HTMLDivElement>(
-    "div[data-view-name='feed-full-update']"
+    "div[data-finite-scroll-hotkey-item]"
   );
 
   const unprocessedPosts = Array.from(posts).filter(
@@ -140,22 +124,53 @@ async function scanAllPost() {
 
   if (unprocessedPosts.length === 0) return;
 
-  const results = await Promise.all(unprocessedPosts.map(processPostData));
+  for (const post of unprocessedPosts) {
+    try {
+      const postContent = post.querySelector<HTMLDivElement>(
+        "div.feed-shared-update-v2"
+      );
+      if (!postContent) continue;
 
-  results.forEach((result) => {
-    if (result) {
-      // entrer logique des filtres surement ici
+      const postData = await processPostData(postContent);
+      if (!postData) continue;
+
+      const maxReactions = Math.max(
+        postData.reactionsCount,
+        postData.reactionsWithNames
+      );
+
+      if (maxReactions < filterDataStore.minReactions) {
+        post.style.display = "none";
+      }
+
+      // if (
+      //   postData.followers !== null &&
+      //   postData.followers < filterDataStore.minFollowers
+      // ) {
+      //   postContainer.classList.add('konecter-filtered');
+      // }
+    } catch (err) {
+      console.error("Error processing a post :", err);
     }
-  });
+  }
 }
 
 function initObserver() {
+  const divFeed = document.querySelector<HTMLElement>(
+    'div.scaffold-finite-scroll__content[data-finite-scroll-hotkey-context="FEED"]'
+  );
+
+  if (!divFeed) {
+    console.error("⚠️ Unable to find feed div");
+    return;
+  }
+
   const observer = new MutationObserver(() => {
     clearTimeout((window as any)._scanTimeout);
-    (window as any)._scanTimeout = setTimeout(scanAllPost, 100);
+    (window as any)._scanTimeout = setTimeout(scanAllPost, 50);
   });
 
-  observer.observe(document.body, {
+  observer.observe(divFeed, {
     childList: true,
     subtree: true,
   });
