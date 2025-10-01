@@ -17,6 +17,8 @@ function dataFromFilters() {
       filterDataStore = filtersData;
 
       sendResponse({ status: "ok" });
+      // 2eme peut etre rapeller scanAllPost ici pour filtrer les premier post present avant le filtre
+      // 3eme ensuite voir pour ajouter les toast de validation
     }
   });
 }
@@ -139,12 +141,37 @@ async function scanAllPost() {
         postData.reactionsWithNames
       );
 
+      // --- filter followers ---
+      if (postData.followers < filterDataStore.minFollowers) {
+        post.style.display = "none";
+      }
+
+      // --- filter reactions ---
       if (maxReactions < filterDataStore.minReactions) {
         post.style.display = "none";
       }
 
-      if (postData.followers < filterDataStore.minFollowers) {
-        post.style.display = "none";
+      // --- filter date ---
+      if (postData.dateValue && filterDataStore.timeRange) {
+        const { value, unit } = postData.dateValue;
+
+        if (filterDataStore.timeRange === 24) {
+          if (unit === "j" || unit === "sem") {
+            post.style.display = "none";
+          }
+        }
+
+        if (filterDataStore.timeRange === 48) {
+          if (unit === "sem" || (unit === "j" && value > 2)) {
+            post.style.display = "none";
+          }
+        }
+
+        if (filterDataStore.timeRange === 1) {
+          if (unit === "sem" && value > 1) {
+            post.style.display = "none";
+          }
+        }
       }
     } catch (err) {
       console.error("Error processing a post :", err);
