@@ -156,13 +156,13 @@ async function scanAllPost() {
         const { value, unit } = postData.dateValue;
 
         if (filterDataStore.timeRange === 24) {
-          if (unit === "j" || unit === "sem") {
+          if ((unit === "j" && value > 1) || unit === "sem") {
             post.style.display = "none";
           }
         }
 
         if (filterDataStore.timeRange === 48) {
-          if (unit === "sem" || (unit === "j" && value > 2)) {
+          if ((unit === "j" && value > 2) || unit === "sem") {
             post.style.display = "none";
           }
         }
@@ -190,8 +190,9 @@ function initObserver() {
   }
 
   const observer = new MutationObserver(() => {
-    clearTimeout((window as any)._scanTimeout);
-    (window as any)._scanTimeout = setTimeout(scanAllPost, 50);
+    scanAllPost();
+    // clearTimeout((window as any)._scanTimeout);
+    // (window as any)._scanTimeout = setTimeout(scanAllPost, 50);
   });
 
   observer.observe(divFeed, {
