@@ -36,15 +36,11 @@ export default function Popup() {
   }
 
   async function handleApplyFilters() {
-    const allValid = Object.values(filters).every((value) => value !== "0");
-    if (!allValid) {
-      return;
-    }
     try {
       const response = await sendMessageToContent("APPLY_FILTERS", filters);
       return response;
     } catch (error) {
-      console.error("Erreur lors de l'envoi des filtres :", error);
+      console.error("Error sending filters :", error);
     }
   }
 
@@ -73,7 +69,6 @@ export default function Popup() {
               </p>
               <SelectField
                 selectName="minFollowers"
-                required={true}
                 onValueChange={handleValueChange("minFollowers")}
                 options={[
                   { value: "500", label: "500 abonnés" },
@@ -89,7 +84,6 @@ export default function Popup() {
               </p>
               <SelectField
                 selectName="minReactions"
-                required={true}
                 onValueChange={handleValueChange("minReactions")}
                 options={[
                   { value: "20", label: "20" },
@@ -105,7 +99,6 @@ export default function Popup() {
               </p>
               <SelectField
                 selectName="timeRange"
-                required={true}
                 onValueChange={handleValueChange("timeRange")}
                 options={[
                   { value: "24", label: "24 heures" },
@@ -114,7 +107,15 @@ export default function Popup() {
                 ]}
               />
             </div>
-            <div className="flex justify-center mt-12">
+            <div className="mt-6">
+              <button
+                onClick={handleApplyFilters}
+                className="text-[var(--Txt-color)] font-medium text-base mb-2 underline cursor-pointer  hover:text-[var(--main-color)]"
+              >
+                Réinitialiser les filtres
+              </button>
+            </div>
+            <div className="flex justify-center mt-10">
               <Button content="Valider" onClick={handleApplyFilters} />
             </div>
           </form>

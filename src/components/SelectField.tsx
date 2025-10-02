@@ -14,18 +14,16 @@ type Option = {
 type SelectFieldProps = {
   selectName: string;
   onValueChange: (value: string) => void;
-  required: boolean;
   options: Option[];
 };
 
 export default function SelectField({
   selectName,
   onValueChange,
-  required,
   options,
 }: SelectFieldProps) {
   return (
-    <Select name={selectName} onValueChange={onValueChange} required={required}>
+    <Select name={selectName} onValueChange={onValueChange}>
       <SelectTrigger className="w-[180px]">
         <SelectValue placeholder="Sélectionner..." />
       </SelectTrigger>
