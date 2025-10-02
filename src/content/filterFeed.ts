@@ -10,7 +10,6 @@ function getSessionToken() {
 
 async function saveFilters(filters: any) {
   await chrome.storage.local.set({ filters });
-  console.log("💾 Filtres sauvegardés:", filters);
 }
 
 function dataFromFilters() {
@@ -23,8 +22,6 @@ function dataFromFilters() {
       sendResponse({ status: "ok" });
 
       window.location.reload();
-
-      // console.log("reset des filtres", filtersData);
     }
   });
 }
