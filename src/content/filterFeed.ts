@@ -8,22 +8,33 @@ function getSessionToken() {
   return token;
 }
 
-let filterDataStore: any = {};
+async function saveFilters(filters: any) {
+  await chrome.storage.local.set({ filters });
+  console.log("💾 Filtres sauvegardés:", filters);
+}
 
 function dataFromFilters() {
-  chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
-    if (msg.action === "APPLY_FILTERS" && sendResponse) {
+  chrome.runtime.onMessage.addListener(async (msg, _sender, sendResponse) => {
+    if (msg.action === "APPLY_FILTERS") {
       const filtersData = msg.payload;
-      filterDataStore = filtersData;
+
+      await saveFilters(filtersData);
 
       sendResponse({ status: "ok" });
-      // 2eme peut etre rapeller scanAllPost ici pour filtrer les premier post present avant le filtre
-      // 3eme ensuite voir pour ajouter les toast de validation
+
+      window.location.reload();
+
+      // console.log("reset des filtres", filtersData);
     }
   });
 }
 
 dataFromFilters();
+
+async function getFilters() {
+  const result = await chrome.storage.local.get("filters");
+  return result.filters || {};
+}
 
 async function getFollowerCount(vanityName: string) {
   const token = getSessionToken();
@@ -116,6 +127,10 @@ async function processPostData(post: HTMLElement) {
 }
 
 async function scanAllPost() {
+  const filters = await getFilters();
+
+  if (Object.keys(filters).length === 0) return;
+
   const posts = document.querySelectorAll<HTMLDivElement>(
     "div[data-finite-scroll-hotkey-item]"
   );
@@ -142,32 +157,32 @@ async function scanAllPost() {
       );
 
       // --- filter followers ---
-      if (postData.followers < filterDataStore.minFollowers) {
+      if (postData.followers < filters.minFollowers) {
         post.style.display = "none";
       }
 
       // --- filter reactions ---
-      if (maxReactions < filterDataStore.minReactions) {
+      if (maxReactions < filters.minReactions) {
         post.style.display = "none";
       }
 
       // --- filter date ---
-      if (postData.dateValue && filterDataStore.timeRange) {
+      if (postData.dateValue && filters.timeRange) {
         const { value, unit } = postData.dateValue;
 
-        if (filterDataStore.timeRange === 24) {
+        if (filters.timeRange === 24) {
           if ((unit === "j" && value > 1) || unit === "sem") {
             post.style.display = "none";
           }
         }
 
-        if (filterDataStore.timeRange === 48) {
+        if (filters.timeRange === 48) {
           if ((unit === "j" && value > 2) || unit === "sem") {
             post.style.display = "none";
           }
         }
 
-        if (filterDataStore.timeRange === 1) {
+        if (filters.timeRange === 1) {
           if (unit === "sem" && value > 1) {
             post.style.display = "none";
           }
@@ -191,19 +206,15 @@ function initObserver() {
 
   const observer = new MutationObserver(() => {
     scanAllPost();
-    // clearTimeout((window as any)._scanTimeout);
-    // (window as any)._scanTimeout = setTimeout(scanAllPost, 50);
   });
 
   observer.observe(divFeed, {
     childList: true,
     subtree: true,
   });
-
-  scanAllPost();
 }
 
-function onlyWorkOnFeedPage() {
+async function onlyWorkOnFeedPage() {
   const url = window.location.href;
   const targetUrl = "https://www.linkedin.com/feed/";
 
@@ -212,6 +223,11 @@ function onlyWorkOnFeedPage() {
   }
   if (url === targetUrl) {
     initObserver();
+
+    const filters = await getFilters();
+    if (Object.keys(filters).length > 0) {
+      await scanAllPost();
+    }
   }
 }
 
