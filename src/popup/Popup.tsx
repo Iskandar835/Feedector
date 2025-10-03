@@ -8,8 +8,6 @@ export default function Popup() {
     minReactions: "0",
   });
 
-  let succesResponse = false;
-
   const handleValueChange = (name: string) => (value: string) => {
     setFilters((prev) => ({
       ...prev,
