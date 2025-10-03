@@ -1,64 +1,41 @@
-function getSessionToken() {
-  const token = document.cookie
-    .split("; ")
-    .find((c) => c.startsWith("JSESSIONID"))
-    ?.split("=")[1]
-    ?.replace(/^"|"$/g, "");
-
-  return token;
-}
-
 async function saveFilters(filters: any) {
   await chrome.storage.local.set({ filters });
 }
-
-function dataFromFilters() {
-  chrome.runtime.onMessage.addListener(async (msg, _sender, sendResponse) => {
-    if (msg.action === "APPLY_FILTERS") {
-      const filtersData = msg.payload;
-
-      await saveFilters(filtersData);
-
-      sendResponse({ status: "ok" });
-
-      window.location.reload();
-    }
-  });
-}
-
-dataFromFilters();
 
 async function getFilters() {
   const result = await chrome.storage.local.get("filters");
   return result.filters || {};
 }
 
-async function getFollowerCount(vanityName: string) {
-  const token = getSessionToken();
-  const url = `https://www.linkedin.com/voyager/api/graphql?includeWebMetadata=true&variables=(vanityName:${vanityName})&queryId=voyagerIdentityDashProfiles.a1a483e719b20537a256b6853cdca711`;
-
-  const response = await fetch(url, {
-    method: "GET",
-    credentials: "include",
-    headers: {
-      accept: "application/vnd.linkedin.normalized+json+2.1",
-      "csrf-token": `${token}`,
-    },
+function resetFilters() {
+  chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+    if (msg.action === "RESET_FILTERS") {
+      chrome.storage.local.remove("filters");
+      sendResponse({ status: "ok" });
+      window.location.reload();
+      return true;
+    }
   });
-
-  if (!response.ok) {
-    console.error("❌ Erreur HTTP la voici :", response.status);
-    return null;
-  }
-
-  const data = await response.json();
-
-  if (data?.included?.[0]?.followerCount === null) {
-    return data?.included?.[5]?.followerCount ?? null;
-  }
-
-  return data?.included?.[0]?.followerCount ?? null;
 }
+
+resetFilters();
+
+function dataFromFilters() {
+  chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+    if (msg.action === "APPLY_FILTERS") {
+      const filtersData = msg.payload;
+
+      saveFilters(filtersData).then(() => {
+        sendResponse({ status: "ok" });
+        window.location.reload();
+      });
+
+      return true;
+    }
+  });
+}
+
+dataFromFilters();
 
 function parsePostDate(dateSpan: HTMLSpanElement | null) {
   if (!dateSpan) return null;
@@ -75,15 +52,7 @@ function parsePostDate(dateSpan: HTMLSpanElement | null) {
 }
 
 async function processPostData(post: HTMLElement) {
-  // --- Get the profil ---
-  const profilLink = post.querySelector<HTMLAnchorElement>(
-    "a.update-components-actor__meta-link"
-  );
-  const vanityName = profilLink
-    ? profilLink.pathname.replace("/in/", "").replace("/", "")
-    : null;
-
-  // --- Get the date *its the same element for sposored post ---
+  // --- Get the date ---
   const dateSpan = post.querySelector<HTMLSpanElement>(
     "span.update-components-actor__sub-description"
   );
@@ -106,14 +75,10 @@ async function processPostData(post: HTMLElement) {
     : 0;
 
   // --- Fetch followers ---
-  if (vanityName && !post.dataset.konecterMarked) {
-    const followers = await getFollowerCount(vanityName);
-
+  if (!post.dataset.konecterMarked) {
     post.dataset.konecterMarked = "true";
 
     return {
-      vanityName,
-      followers,
       dateValue,
       reactionsCount,
       reactionsWithNames,
@@ -153,11 +118,6 @@ async function scanAllPost() {
         postData.reactionsWithNames
       );
 
-      // --- filter followers ---
-      if (postData.followers < filters.minFollowers) {
-        post.style.display = "none";
-      }
-
       // --- filter reactions ---
       if (maxReactions < filters.minReactions) {
         post.style.display = "none";
@@ -184,6 +144,10 @@ async function scanAllPost() {
             post.style.display = "none";
           }
         }
+
+        // erreur reperer :
+        // quand on  change de page et qu'on reviens les filtres ne marche plus obligé de refresh
+        // Voir si on peut accelerer le processus et que sa soit plus rapide (non si ça prend trop de temps)
       }
     } catch (err) {
       console.error("Error processing a post :", err);
