@@ -4,10 +4,11 @@ import SelectField from "@/components/SelectField";
 
 export default function Popup() {
   const [filters, setFilters] = useState({
-    minFollowers: "0",
     timeRange: "0",
     minReactions: "0",
   });
+
+  let succesResponse = false;
 
   const handleValueChange = (name: string) => (value: string) => {
     setFilters((prev) => ({
@@ -18,7 +19,7 @@ export default function Popup() {
 
   function sendMessageToContent<T = any>(
     action: string,
-    payload: any
+    payload?: any
   ): Promise<T> {
     return new Promise((resolve) => {
       chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
@@ -41,6 +42,17 @@ export default function Popup() {
       return response;
     } catch (error) {
       console.error("Error sending filters :", error);
+      alert("Error sending filters, please try again later");
+    }
+  }
+
+  async function handleResetFilters() {
+    try {
+      const response = await sendMessageToContent("RESET_FILTERS");
+      return response;
+    } catch (error) {
+      console.error("Error resetting filters :", error);
+      alert("Error to reset filters, please try again later");
     }
   }
 
@@ -63,21 +75,6 @@ export default function Popup() {
             Filtres :
           </h2>
           <form>
-            <div className="mb-4">
-              <p className="text-[var(--Txt-color)] font-medium text-base mb-2">
-                Nombre minimum d'abonnées des profils
-              </p>
-              <SelectField
-                selectName="minFollowers"
-                onValueChange={handleValueChange("minFollowers")}
-                options={[
-                  { value: "500", label: "500 abonnés" },
-                  { value: "2500", label: "2500 abonnés" },
-                  { value: "5000", label: "5000 abonnés" },
-                  { value: "10000", label: "10000 abonnés" },
-                ]}
-              />
-            </div>
             <div className="mb-4">
               <p className="text-[var(--Txt-color)] font-medium text-base mb-2">
                 Nombre minimum de réactions sur les posts
@@ -109,13 +106,13 @@ export default function Popup() {
             </div>
             <div className="mt-6">
               <button
-                onClick={handleApplyFilters}
+                onClick={handleResetFilters}
                 className="text-[var(--Txt-color)] font-medium text-base mb-2 underline cursor-pointer  hover:text-[var(--main-color)]"
               >
                 Réinitialiser les filtres
               </button>
             </div>
-            <div className="flex justify-center mt-10">
+            <div className="flex justify-center mt-7">
               <Button content="Valider" onClick={handleApplyFilters} />
             </div>
           </form>
