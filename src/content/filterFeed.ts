@@ -11,8 +11,11 @@ function resetFilters() {
   chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     if (msg.action === "RESET_FILTERS") {
       chrome.storage.local.remove("filters");
+      cachedFilters = null;
+
       sendResponse({ status: "ok" });
       window.location.reload();
+
       return true;
     }
   });
@@ -26,6 +29,7 @@ function dataFromFilters() {
       const filtersData = msg.payload;
 
       saveFilters(filtersData).then(() => {
+        cachedFilters = null;
         sendResponse({ status: "ok" });
         window.location.reload();
       });
@@ -51,7 +55,7 @@ function parsePostDate(dateSpan: HTMLSpanElement | null) {
   return { value, unit };
 }
 
-async function processPostData(post: HTMLElement) {
+function processPostData(post: HTMLElement) {
   // --- Get the date ---
   const dateSpan = post.querySelector<HTMLSpanElement>(
     "span.update-components-actor__sub-description"
@@ -88,10 +92,14 @@ async function processPostData(post: HTMLElement) {
   return null;
 }
 
-async function scanAllPost() {
-  const filters = await getFilters();
+let cachedFilters: any = null;
 
-  if (Object.keys(filters).length === 0) return;
+async function scanAllPost() {
+  if (!cachedFilters) {
+    cachedFilters = await getFilters();
+  }
+
+  if (Object.keys(cachedFilters).length === 0) return;
 
   const posts = document.querySelectorAll<HTMLDivElement>(
     "div[data-finite-scroll-hotkey-item]"
@@ -110,7 +118,7 @@ async function scanAllPost() {
       );
       if (!postContent) continue;
 
-      const postData = await processPostData(postContent);
+      const postData = processPostData(postContent);
       if (!postData) continue;
 
       const maxReactions = Math.max(
@@ -119,41 +127,39 @@ async function scanAllPost() {
       );
 
       // --- filter reactions ---
-      if (maxReactions < filters.minReactions) {
+      if (maxReactions < cachedFilters.minReactions) {
         post.style.display = "none";
       }
 
       // --- filter date ---
-      if (postData.dateValue && filters.timeRange) {
+      if (postData.dateValue && cachedFilters.timeRange) {
         const { value, unit } = postData.dateValue;
 
-        if (filters.timeRange === 24) {
+        if (cachedFilters.timeRange === 24) {
           if ((unit === "j" && value > 1) || unit === "sem") {
             post.style.display = "none";
           }
         }
 
-        if (filters.timeRange === 48) {
+        if (cachedFilters.timeRange === 48) {
           if ((unit === "j" && value > 2) || unit === "sem") {
             post.style.display = "none";
           }
         }
 
-        if (filters.timeRange === 1) {
+        if (cachedFilters.timeRange === 1) {
           if (unit === "sem" && value > 1) {
             post.style.display = "none";
           }
         }
-
-        // erreur reperer :
-        // quand on  change de page et qu'on reviens les filtres ne marche plus obligé de refresh
-        // Voir si on peut accelerer le processus et que sa soit plus rapide (non si ça prend trop de temps)
       }
     } catch (err) {
       console.error("Error processing a post :", err);
     }
   }
 }
+
+let debounceTimer: number | null = null;
 
 function initObserver() {
   const divFeed = document.querySelector<HTMLElement>(
@@ -166,7 +172,12 @@ function initObserver() {
   }
 
   const observer = new MutationObserver(() => {
-    scanAllPost();
+    if (debounceTimer) {
+      clearTimeout(debounceTimer);
+    }
+    debounceTimer = window.setTimeout(() => {
+      scanAllPost();
+    }, 100);
   });
 
   observer.observe(divFeed, {
